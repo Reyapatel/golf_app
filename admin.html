@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin</title>
+</head>
+
+<body>
+
+<!-- STEP 2 (CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<h2>Admin Panel</h2>
+
+<h3>All Scores</h3>
+<ul id="allScores"></ul>
+
+<h3>Top Player</h3>
+<p id="topPlayer"></p>
+
+<!-- STEP 3 (SCRIPT STARTS HERE) -->
+<script>
+
+// Supabase setup (COPY from dashboard)
+const supabaseClient = supabase.createClient(
+    "https://bhoyykpqqxbclwpjjmjh.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJob3l5a3BxcXhiY2x3cGpqbWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzOTIxOTAsImV4cCI6MjA4OTk2ODE5MH0.g3Mbsxt8Kud0QGl5CPfi3lOoz1_He0A6v1E1r3BMunU"
+);
+
+// Fetch all scores
+async function fetchAllScores() {
+    const { data, error } = await supabaseClient
+        .from("scores")
+        .select("*")
+        .order("score", { ascending: false });
+
+    const list = document.getElementById("allScores");
+    list.innerHTML = "";
+
+    let topScore = 0;
+    let topText = "";
+
+    data.forEach(item => {
+        const li = document.createElement("li");
+        const formattedDate = item.date.split("T")[0];
+        li.textContent = `Score: ${item.score} | Date: ${formattedDate}`;
+        list.appendChild(li);
+
+        if (item.score > topScore) {
+            topScore = item.score;
+            topText = li.textContent;
+        }
+    });
+
+    document.getElementById("topPlayer").innerText =
+        `Top Score → ${topText}`;
+}
+
+// Run on load
+fetchAllScores();
+
+</script>
+
+</body>
+</html>

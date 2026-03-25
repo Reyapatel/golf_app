@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+
+<body>
+
+    <h2>Welcome to Dashboard</h2>
+
+    <p id="user-email"></p>
+
+    <button onclick="logout()">Logout</button>
+
+    <h2>Enter Golf Score</h2>
+
+    <input type="number" id="scoreInput" placeholder="Enter score (1-45)">
+    <input type="date" id="dateInput">
+    <button id="addBtn">Add Score</button>
+
+    <h3>Your Last 5 Scores</h3>
+    <ul id="scoreList"></ul>
+    <h3>Subscription</h3>
+    <p id="subscriptionStatus">Subscription: Active (Monthly)</p>
+
+        <h3>Select Charity</h3>
+    <select id="charitySelect">
+    <option value="">Choose Charity</option>
+    <option value="Save The Children">Save The Children</option>
+    <option value="Red Cross">Red Cross</option>
+    <option value="UNICEF">UNICEF</option>
+    </select>
+
+<input type="number" id="charityPercent" placeholder="Contribution % (min 10)">
+<button onclick="saveCharity()">Save Charity</button>
+
+<p id="selectedCharity"></p>
+<h3>Draw Result</h3>
+<button onclick="drawWinner()">Run Draw</button>
+
+<p id="drawResult"></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+    <script>
+    // ✅ Supabase setup
+    const supabaseClient = supabase.createClient(
+        "https://bhoyykpqqxbclwpjjmjh.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJob3l5a3BxcXhiY2x3cGpqbWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzOTIxOTAsImV4cCI6MjA4OTk2ODE5MH0.g3Mbsxt8Kud0QGl5CPfi3lOoz1_He0A6v1E1r3BMunU"
+    );
+
+    // ✅ Get user
+    async function getUser() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+
+        if (user) {
+            document.getElementById("user-email").innerText =
+                "Logged in as: " + user.email;
+        } else {
+            window.location.href = "login.html";
+        }
+    }
+
+    getUser();
+
+    function saveCharity() {
+    const charity = document.getElementById("charitySelect").value;
+    const percent = document.getElementById("charityPercent").value;
+
+    if (!charity || !percent) {
+        alert("Please select charity and percentage");
+        return;
+    }
+
+    if (percent < 10) {
+        alert("Minimum contribution is 10%");
+        return;
+    }
+
+    document.getElementById("selectedCharity").innerText =
+        `Charity: ${charity} | Contribution: ${percent}%`;
+}
+
+    // ✅ Logout
+    async function logout() {
+        await supabaseClient.auth.signOut();
+        window.location.href = "login.html";
+    }
+
+    // ✅ Add Score (Supabase)
+    async function addScore() {
+        const score = document.getElementById("scoreInput").value;
+        const date = document.getElementById("dateInput").value;
+
+        if (!score || !date) {
+            alert("Please enter both score and date");
+            return;
+        }
+
+        if (score < 1 || score > 45) {
+            alert("Score must be between 1 and 45");
+            return;
+        }
+
+        const { error } = await supabaseClient
+            .from("scores")
+            .insert([{ score: Number(score), date: date }]);
+
+        if (error) {
+            alert("Error saving score");
+            console.log(error);
+        } else {
+            alert("Score added successfully!");
+            fetchScores();
+        }
+    }
+
+    // ✅ Fetch & display last 5 scores
+    async function fetchScores() {
+        const { data, error } = await supabaseClient
+            .from("scores")
+            .select("*")
+            .order("date", { ascending: false })
+            .limit(5);
+
+        const scoreList = document.getElementById("scoreList");
+        scoreList.innerHTML = "";
+
+        data.forEach(item => {
+            const li = document.createElement("li");
+            const formattedDate = item.date.split("T")[0];
+            li.textContent = `Score: ${item.score} | Date: ${formattedDate}`;
+            scoreList.appendChild(li);
+        });
+    }
+
+    // ✅ Button click (IMPORTANT FIX)
+    document.getElementById("addBtn").addEventListener("click", addScore);
+
+    // ✅ Load scores on page load
+    fetchScores();
+    // Button click
+document.getElementById("addBtn").addEventListener("click", addScore);
+
+// Load scores
+fetchScores();
+
+function drawWinner() {
+    const listItems = document.querySelectorAll("#scoreList li");
+
+    if (listItems.length === 0) {
+        alert("No scores available");
+        return;
+    }
+
+    let maxScore = 0;
+    let winnerText = "";
+
+    listItems.forEach(item => {
+        const text = item.textContent;
+        const score = parseInt(text.split("|")[0].replace("Score: ", ""));
+
+        if (score > maxScore) {
+            maxScore = score;
+            winnerText = text;
+        }
+    });
+
+    document.getElementById("drawResult").innerText =
+        `Winner → ${winnerText}`;
+}
+    
+
+    </script>
+
+</body>
+</html>
