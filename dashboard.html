@@ -1,69 +1,102 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html>
 <head>
     <title>Dashboard</title>
-</head>
+</head><body><h2>Welcome to Dashboard</h2>
 
-<body>
+<p id="user-email"></p>
 
-    <h2>Welcome to Dashboard</h2>
+<button onclick="logout()">Logout</button>
 
-    <p id="user-email"></p>
+<h2>Enter Golf Score</h2>
 
-    <button onclick="logout()">Logout</button>
+<input type="number" id="scoreInput" placeholder="Enter score (1-45)">
+<input type="date" id="dateInput">
+<button id="addBtn">Add Score</button>
 
-    <h2>Enter Golf Score</h2>
+<h3>Your Last 5 Scores</h3>
+<ul id="scoreList"></ul>
 
-    <input type="number" id="scoreInput" placeholder="Enter score (1-45)">
-    <input type="date" id="dateInput">
-    <button id="addBtn">Add Score</button>
+<h3>Participation Summary</h3>
+<p id="participation"></p>
 
-    <h3>Your Last 5 Scores</h3>
-    <ul id="scoreList"></ul>
-    <h3>Subscription</h3>
-    <p id="subscriptionStatus">Subscription: Active (Monthly)</p>
+<h3>Winnings</h3>
+<p id="winnings"></p>
 
-        <h3>Select Charity</h3>
-    <select id="charitySelect">
+
+<h3>Subscription</h3>
+
+<select id="planSelect">
+  <option value="">Select Plan</option>
+  <option value="monthly">Monthly</option>
+  <option value="yearly">Yearly</option>
+</select>
+
+<button id="subscribeBtn" onclick="subscribe()">Subscribe</button>
+<p id="sub-status"></p>
+
+<h3>Select Charity</h3>
+<select id="charitySelect">
     <option value="">Choose Charity</option>
     <option value="Save The Children">Save The Children</option>
     <option value="Red Cross">Red Cross</option>
     <option value="UNICEF">UNICEF</option>
-    </select>
+</select>
 
 <input type="number" id="charityPercent" placeholder="Contribution % (min 10)">
 <button onclick="saveCharity()">Save Charity</button>
 
 <p id="selectedCharity"></p>
+
 <h3>Draw Result</h3>
 <button onclick="drawWinner()">Run Draw</button>
+<p id="winnerResult"></p>
 
-<p id="drawResult"></p>
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
 
-    <script>
-    // ✅ Supabase setup
-    const supabaseClient = supabase.createClient(
-        "https://bhoyykpqqxbclwpjjmjh.supabase.co",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJob3l5a3BxcXhiY2x3cGpqbWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzOTIxOTAsImV4cCI6MjA4OTk2ODE5MH0.g3Mbsxt8Kud0QGl5CPfi3lOoz1_He0A6v1E1r3BMunU"
-    );
+// ==============================
+// Supabase setup
+// ==============================
+const supabaseClient = supabase.createClient(
+    "https://bhoyykpqqxbclwpjjmjh.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJob3l5a3BxcXhiY2x3cGpqbWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzOTIxOTAsImV4cCI6MjA4OTk2ODE5MH0.g3Mbsxt8Kud0QGl5CPfi3lOoz1_He0A6v1E1r3BMunU"
+);
 
-    // ✅ Get user
-    async function getUser() {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+// ==============================
+// Get logged-in user
+// ==============================
+async function getUser() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
 
-        if (user) {
-            document.getElementById("user-email").innerText =
-                "Logged in as: " + user.email;
-        } else {
-            window.location.href = "login.html";
-        }
+    if (user) {
+        document.getElementById("user-email").innerText =
+            "Logged in as: " + user.email;
+    } else {
+        window.location.href = "login.html";
+    }
+}
+
+getUser();
+
+// ==============================
+// Logout
+// ==============================
+async function logout() {
+    await supabaseClient.auth.signOut();
+    window.location.href = "login.html";
+}
+
+// ==============================
+// Save Charity
+async function saveCharity() {
+
+    if (!(await isSubscribed())) {
+        alert("Please subscribe to save charity");
+        return;
     }
 
-    getUser();
-
-    function saveCharity() {
     const charity = document.getElementById("charitySelect").value;
     const percent = document.getElementById("charityPercent").value;
 
@@ -81,71 +114,186 @@
         `Charity: ${charity} | Contribution: ${percent}%`;
 }
 
-    // ✅ Logout
-    async function logout() {
-        await supabaseClient.auth.signOut();
-        window.location.href = "login.html";
+// ==============================
+// Add Score
+// ==============================
+async function addScore() {
+    if (!(await isSubscribed())) {
+    alert("Please subscribe to add score");
+    return;
+    }
+    const score = document.getElementById("scoreInput").value;
+    const date = document.getElementById("dateInput").value;
+
+    if (!score || !date) {
+        alert("Please enter both score and date");
+        return;
     }
 
-    // ✅ Add Score (Supabase)
-    async function addScore() {
-        const score = document.getElementById("scoreInput").value;
-        const date = document.getElementById("dateInput").value;
-
-        if (!score || !date) {
-            alert("Please enter both score and date");
-            return;
-        }
-
-        if (score < 1 || score > 45) {
-            alert("Score must be between 1 and 45");
-            return;
-        }
-
-        const { error } = await supabaseClient
-            .from("scores")
-            .insert([{ score: Number(score), date: date }]);
-
-        if (error) {
-            alert("Error saving score");
-            console.log(error);
-        } else {
-            alert("Score added successfully!");
-            fetchScores();
-        }
+    if (score < 1 || score > 45) {
+        alert("Score must be between 1 and 45");
+        return;
     }
 
-    // ✅ Fetch & display last 5 scores
-    async function fetchScores() {
-        const { data, error } = await supabaseClient
-            .from("scores")
-            .select("*")
-            .order("date", { ascending: false })
-            .limit(5);
+    // Step 1: Get existing scores
+    const { data: existingScores } = await supabaseClient
+        .from("scores")
+        .select("*")
+        .order("date", { ascending: true });
 
-        const scoreList = document.getElementById("scoreList");
-        scoreList.innerHTML = "";
+    // Step 2: Keep only 5 scores
+    // Step 2: Keep only 5 scores
+    if (existingScores.length >= 5) {
+    const oldest = existingScores[0];
 
-        data.forEach(item => {
-            const li = document.createElement("li");
-            const formattedDate = item.date.split("T")[0];
-            li.textContent = `Score: ${item.score} | Date: ${formattedDate}`;
-            scoreList.appendChild(li);
-        });
+  // 🔥 DELETE oldest score from DB
+    await supabaseClient
+    .from("scores")
+    .delete()
+    .eq("id", oldest.id);
+    }
+    // Step 3: Insert new score
+    const { error } = await supabaseClient
+        .from("scores")
+        .insert([{ score: Number(score), date: date }]);
+
+    if (error) {
+        alert("Error saving score");
+        console.log(error);
+    } else {
+        alert("Score added successfully!");
+        fetchScores();
+    }
+}
+
+
+// ==============================
+// Fetch Scores
+// ==============================
+async function fetchScores() {
+    const { data, error } = await supabaseClient
+        .from("scores")
+        .select("*")
+        .order("date", { ascending: false })
+        .limit(5);
+
+    const scoreList = document.getElementById("scoreList");
+    scoreList.innerHTML = "";
+
+    data.forEach(item => {
+        const li = document.createElement("li");
+        const formattedDate = item.date.split("T")[0];
+
+        li.textContent = `Score: ${item.score} | Date: ${formattedDate}`;
+        scoreList.appendChild(li);
+    });
+}
+// ======================
+// SUBSCRIPTION SYSTEM
+// ======================
+
+async function subscribe() {
+
+    const plan = document.getElementById("planSelect").value;   // ✅ ADD THIS
+
+    if (!plan) {
+        alert("Please select a plan");
+        return;
     }
 
-    // ✅ Button click (IMPORTANT FIX)
-    document.getElementById("addBtn").addEventListener("click", addScore);
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    console.log("User ID:", user.id);
 
-    // ✅ Load scores on page load
-    fetchScores();
-    // Button click
-document.getElementById("addBtn").addEventListener("click", addScore);
+  const { data: existing } = await supabaseClient
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", user.id)
+    
+  if (existing && existing.length > 0) {
+    alert("You already have an active subscription");
+    return;
+  }
 
-// Load scores
-fetchScores();
+  const { data: insertData, error: insertError } = await supabaseClient
+  .from("subscriptions")
+  .insert([
+    {
+      user_id: user.id,
+      plan: plan,
+      status: "active"
+    }
+  ])
+  .select();
 
-function drawWinner() {
+console.log("Insert result:", insertData);
+console.log("Insert error:", insertError);
+
+if (insertError) {
+  alert("Subscription failed");
+  console.log(insertError);
+  return;
+}
+
+alert("Subscribed successfully!");
+loadSubscription();
+}
+
+async function loadSubscription() {
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) return;
+
+    const { data } = await supabaseClient
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+    if (data.length > 0) {
+        document.getElementById("sub-status").innerText =
+            "Subscribed to " + data[0].plan + " plan";
+    }
+}
+
+async function isSubscribed() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+        console.log("No user");
+        return false;
+    }
+
+    const { data, error } = await supabaseClient
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user.id);
+
+    console.log("User ID:", user.id);
+    console.log("Subscription data:", data);
+    console.log("Error:", error);
+
+    return data && data.length > 0;
+}
+// ==============================
+// Draw Winner (FIXED)
+// ==============================
+async function drawWinner() {
+
+    if (!(await isSubscribed())) {
+        alert("Please subscribe to run draw");
+        return;
+    }
+
+    const today = new Date();
+    const month = today.getMonth();
+
+    const lastDrawMonth = localStorage.getItem("lastDrawMonth");
+    if (lastDrawMonth == month) {
+        alert("Draw already done this month");
+  // DO NOT return
+    }
     const listItems = document.querySelectorAll("#scoreList li");
 
     if (listItems.length === 0) {
@@ -153,25 +301,92 @@ function drawWinner() {
         return;
     }
 
-    let maxScore = 0;
-    let winnerText = "";
+    const randomIndex = Math.floor(Math.random() * listItems.length);
+    const winner = listItems[randomIndex].textContent;
+    const scoreMatch = winner.match(/Score: (\d+)/);
+    const scoreValue = scoreMatch ? Number(scoreMatch[1]) : 0;
 
-    listItems.forEach(item => {
-        const text = item.textContent;
-        const score = parseInt(text.split("|")[0].replace("Score: ", ""));
+    let resultMessage = "";
 
-        if (score > maxScore) {
-            maxScore = score;
-            winnerText = text;
-        }
-    });
-
-    document.getElementById("drawResult").innerText =
-        `Winner → ${winnerText}`;
+    if (scoreValue >= 40) {
+        resultMessage = "🏆 Jackpot Winner (5 matches)";
+    } else if (scoreValue >= 30) {
+        resultMessage = "🎉 Great! (4 matches)";
+    } else if (scoreValue >= 20) {
+        resultMessage = "👍 Good (3 matches)";
+    } else {
+        resultMessage = "❌ No win";
+    }
+    document.getElementById("winnerResult").innerText =
+    "🏆 Winner: " + winner + " | " + resultMessage;
+    localStorage.setItem("lastDrawMonth", month);
 }
-    
+async function loadParticipation() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
 
-    </script>
+    const { data, error } = await supabaseClient
+        .from("scores")
+        .select("*")
+        .eq("user_id", user.id);
+
+    if (!data || data.length === 0) {
+        document.getElementById("participation").innerText =
+            "No participation yet";
+        return;
+    }
+
+    document.getElementById("participation").innerText =
+        "You have entered " + data.length + " scores";
+}
+async function loadWinnings() {
+
+    // Get logged-in user
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) return;
+
+    // Fetch winnings data
+    const { data, error } = await supabaseClient
+        .from("winners")
+        .select("*")
+        .eq("user_id", user.id);
+
+    // Debug (optional but helpful)
+    console.log("Winnings data:", data);
+    console.log("Error:", error);
+
+    // Safety check (VERY IMPORTANT)
+    if (error || !data) {
+        document.getElementById("winnings").innerText = "Total Winnings: ₹0";
+        return;
+    }
+
+    // Calculate total winnings
+    let total = 0;
+
+    if (data &&data.length > 0) {
+        data.forEach(item => {
+            total += item.amount || 0;
+        });
+    }
+
+    // Display result
+    document.getElementById("winnings").innerText =
+        "Total Winnings: ₹" + total;
+}
+
+    // ==============================
+// Button + Load
+// ==============================
+document.getElementById("addBtn").addEventListener("click", addScore);
+
+fetchScores();
+loadSubscription();
+loadParticipation();
+loadWinnings();
+
+</script>
 
 </body>
 </html>
